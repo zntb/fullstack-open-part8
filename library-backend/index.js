@@ -1,5 +1,7 @@
 const { ApolloServer } = require('@apollo/server');
 const { startStandaloneServer } = require('@apollo/server/standalone');
+const { v1: uuid } = require('uuid');
+const { GraphQLError } = require('graphql');
 
 let authors = [
   {
@@ -103,6 +105,7 @@ const typeDefs = `
 
   type Author {
     name: String!
+    born: Int
     bookCount: Int!
   }
 
@@ -112,13 +115,22 @@ const typeDefs = `
     allBooks(author: String, genre: String): [Book!]!
     allAuthors: [Author!]!
   }
+
+  type Mutation {
+    addBook(
+      title: String!
+      author: String!
+      published: Int!
+      genres: [String!]!
+    ): Book!
+  }
 `;
 
 const resolvers = {
   Query: {
     bookCount: () => books.length,
     authorCount: () => authors.length,
-    allBooks: (parent, args) => {
+    allBooks: (root, args) => {
       let filteredBooks = books;
 
       if (args.author) {
@@ -138,8 +150,43 @@ const resolvers = {
     allAuthors: () =>
       authors.map(author => ({
         name: author.name,
+        born: author.born || null,
         bookCount: books.filter(book => book.author === author.name).length,
       })),
+  },
+  Mutation: {
+    addBook: (root, args) => {
+      const { title, author, published, genres } = args;
+
+      const bookExists = books.find(b => b.title === title);
+
+      if (bookExists) {
+        throw new GraphQLError('Book already exists', {
+          extensions: {
+            code: 'BOOK_ALREADY_EXISTS',
+            invalidArgs: args,
+          },
+        });
+      }
+
+      let authorExists = authors.find(a => a.name === author);
+
+      if (!authorExists) {
+        authorExists = { name: author, id: uuid() };
+        authors.push(authorExists);
+      }
+
+      const newBook = {
+        title,
+        author: authorExists.name,
+        published,
+        genres,
+        id: uuid(),
+      };
+
+      books.push(newBook);
+      return newBook;
+    },
   },
 };
 
