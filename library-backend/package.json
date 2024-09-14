@@ -1,0 +1,18 @@
+{
+  "name": "library-backend",
+  "version": "1.0.0",
+  "description": "Through the exercises, we will implement a GraphQL backend for a small library. Start with [this file](https://github.com/fullstack-hy2020/misc/blob/master/library-backend.js). Remember to `npm init` and to install dependencies!",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@apollo/server": "^4.11.0",
+    "graphql": "^16.9.0",
+    "nodemon": "^3.1.4",
+    "uuid": "^10.0.0"
+  }
+}
