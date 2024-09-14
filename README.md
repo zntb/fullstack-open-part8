@@ -2,4 +2,4 @@
 
 All exercises are saved in a separate commit.
 
-- [Exercises 8.1-8.6](./library-backend/)
+- [Exercises 8.1-8.7](./library-backend/)
