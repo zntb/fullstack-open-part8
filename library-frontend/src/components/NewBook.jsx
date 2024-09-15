@@ -1,32 +1,61 @@
-import { useState } from 'react'
+import { useState } from 'react';
+import { useMutation } from '@apollo/client';
+import { ADD_BOOK, ALL_BOOKS, ALL_AUTHORS } from '../queries';
 
-const NewBook = (props) => {
-  const [title, setTitle] = useState('')
-  const [author, setAuthor] = useState('')
-  const [published, setPublished] = useState('')
-  const [genre, setGenre] = useState('')
-  const [genres, setGenres] = useState([])
+const NewBook = ({ show, setError }) => {
+  const [title, setTitle] = useState('');
+  const [author, setAuthor] = useState('');
+  const [published, setPublished] = useState('');
+  const [genre, setGenre] = useState('');
+  const [genres, setGenres] = useState([]);
 
-  if (!props.show) {
-    return null
+  const [addBook] = useMutation(ADD_BOOK, {
+    refetchQueries: [{ query: ALL_BOOKS }, { query: ALL_AUTHORS }],
+    onError: error => {
+      const messages = error.graphQLErrors.map(e => e.message).join('\n');
+      setError(messages);
+    },
+  });
+
+  if (!show) {
+    return null;
   }
 
-  const submit = async (event) => {
-    event.preventDefault()
+  const validateForm = () => {
+    if (!title || !author || !published || genres.length === 0) {
+      setError(
+        'All fields must be filled, and at least one genre must be added.',
+      );
+      return false;
+    }
+    setError('');
+    return true;
+  };
 
-    console.log('add book...')
+  const submit = async event => {
+    event.preventDefault();
 
-    setTitle('')
-    setPublished('')
-    setAuthor('')
-    setGenres([])
-    setGenre('')
-  }
+    if (!validateForm()) {
+      return;
+    }
+
+    await addBook({
+      variables: { title, author, published: Number(published), genres },
+    });
+
+    setTitle('');
+    setPublished('');
+    setAuthor('');
+    setGenres([]);
+    setGenre('');
+  };
 
   const addGenre = () => {
-    setGenres(genres.concat(genre))
-    setGenre('')
-  }
+    if (genre) {
+      setGenres(genres.concat(genre));
+      setGenre('');
+    }
+  };
 
   return (
     <div>
@@ -48,7 +77,7 @@ const NewBook = (props) => {
         <div>
           published
           <input
-            type="number"
+            type='number'
             value={published}
             onChange={({ target }) => setPublished(target.value)}
           />
@@ -58,15 +87,15 @@ const NewBook = (props) => {
             value={genre}
             onChange={({ target }) => setGenre(target.value)}
           />
-          <button onClick={addGenre} type="button">
+          <button onClick={addGenre} type='button'>
             add genre
           </button>
         </div>
         <div>genres: {genres.join(' ')}</div>
-        <button type="submit">create book</button>
+        <button type='submit'>create book</button>
       </form>
     </div>
-  )
-}
+  );
+};
 
-export default NewBook
+export default NewBook;
