@@ -11,3 +11,9 @@ Note if you want, you can also use [React router](https://fullstackopen.com/en/p
 Implement an Authors view to show the details of all authors on a page as follows:
 
 ![authors view](./assets/16.png)
+
+## 8.9: Books view
+
+Implement a Books view to show on a page all other details of all books except their genres.
+
+![books view](./assets/17.png)
