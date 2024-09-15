@@ -38,7 +38,7 @@ const App = () => {
         <Notify errorMessage={errorMessage} />
 
         <Routes>
-          <Route path='/' element={<Authors show={true} />} />
+          <Route path='/' element={<Authors show={true} setError={notify} />} />
           <Route path='/books' element={<Books show={true} />} />
           <Route
             path='/add'
