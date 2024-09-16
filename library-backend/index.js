@@ -1,8 +1,8 @@
 const { ApolloServer } = require('@apollo/server');
 const { startStandaloneServer } = require('@apollo/server/standalone');
-const { v1: uuid } = require('uuid');
+
 const { GraphQLError } = require('graphql');
-const jwt = require('jsonwebtoken');
+
 const mongoose = require('mongoose');
 mongoose.set('strictQuery', false);
 require('dotenv').config();
@@ -157,50 +157,74 @@ const resolvers = {
     authorCount: async () => Author.collection.countDocuments(),
     allBooks: async (root, args) => {
       if (!args.author && !args.genre) {
-        return await Book.find({});
+        console.log(await Book.find({}));
+        return Book.find({}).populate('author');
       }
 
-      return Book.find({}).populate('author');
+      if (args.author && !args.genre) {
+        const author = await Author.findOne({ name: args.author });
+        return await Book.find({ author });
+      }
+
+      if (!args.author && args.genre) {
+        return await Book.find({ genres: { $in: [args.genre] } });
+      }
+
+      const author = await Author.findOne({ name: args.author });
+      if (!author) {
+        return [];
+      }
+      return await Book.find({
+        author: author.id,
+        genres: { $in: [args.genre] },
+      });
     },
-    allAuthors: async () => {
-      const authors = await Author.find({});
-      return authors.map(author => ({
-        name: author.name,
-        born: author.born || null,
-        bookCount: Book.countDocuments({ author: author._id }),
-      }));
+    allAuthors: async () => Author.find({}),
+  },
+  Author: {
+    bookCount: async root => {
+      const author = await Author.find({ name: root.name });
+      const booksOfAuthor = await Book.countDocuments({ author });
+      return booksOfAuthor;
     },
   },
   Mutation: {
     addBook: async (root, args) => {
-      const { title, author, published, genres } = args;
-
-      const bookExists = await Book.findOne({ title });
-      if (bookExists) {
-        throw new GraphQLError('Book already exists', {
-          extensions: {
-            code: 'BOOK_ALREADY_EXISTS',
-            invalidArgs: args,
-          },
+      const author =
+        (await Author.findOne({ name: args.author })) ||
+        new Author({ name: args.author });
+      try {
+        await author.save();
+      } catch (error) {
+        throw new GraphQLError(error.message, {
+          invalidArgs: { author: args.author },
         });
       }
 
-      let authorExists = await Author.findOne({ name: author });
-
-      if (!authorExists) {
-        const newAuthor = new Author({ name: author });
-        authorExists = await newAuthor.save();
+      const book = new Book({ ...args, author });
+      try {
+        await book.save();
+      } catch (error) {
+        throw new GraphQLError(error.message, {
+          invalidArgs: args,
+        });
       }
-
-      const newBook = new Book({
-        title,
-        author: authorExists._id,
-        published,
-        genres,
-      });
-
-      await newBook.save();
-      return newBook.populate('author');
+      return book;
+    },
+    editAuthor: async (root, args) => {
+      const author = await Author.findOne({ name: args.name });
+      if (!author) {
+        return null;
+      }
+      author.born = args.setBornTo;
+      try {
+        await author.save();
+      } catch (error) {
+        throw new GraphQLError(error.message, {
+          invalidArgs: { setBornTo: args.setBornTo },
+        });
+      }
+      return author;
     },
   },
 };
