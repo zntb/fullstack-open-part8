@@ -22,111 +22,20 @@ mongoose
     console.log('error connection to MongoDB:', error.message);
   });
 
-let authors = [
-  {
-    name: 'Robert Martin',
-    id: 'afa51ab0-344d-11e9-a414-719c6709cf3e',
-    born: 1952,
-  },
-  {
-    name: 'Martin Fowler',
-    id: 'afa5b6f0-344d-11e9-a414-719c6709cf3e',
-    born: 1963,
-  },
-  {
-    name: 'Fyodor Dostoevsky',
-    id: 'afa5b6f1-344d-11e9-a414-719c6709cf3e',
-    born: 1821,
-  },
-  {
-    name: 'Joshua Kerievsky', // birthyear not known
-    id: 'afa5b6f2-344d-11e9-a414-719c6709cf3e',
-  },
-  {
-    name: 'Sandi Metz', // birthyear not known
-    id: 'afa5b6f3-344d-11e9-a414-719c6709cf3e',
-  },
-];
-
-/*
- * Suomi:
- * Saattaisi olla järkevämpää assosioida kirja ja sen tekijä tallettamalla kirjan yhteyteen tekijän nimen sijaan tekijän id
- * Yksinkertaisuuden vuoksi tallennamme kuitenkin kirjan yhteyteen tekijän nimen
- *
- * English:
- * It might make more sense to associate a book with its author by storing the author's id in the context of the book instead of the author's name
- * However, for simplicity, we will store the author's name in connection with the book
- *
- * Spanish:
- * Podría tener más sentido asociar un libro con su autor almacenando la id del autor en el contexto del libro en lugar del nombre del autor
- * Sin embargo, por simplicidad, almacenaremos el nombre del autor en conexión con el libro
- */
-
-let books = [
-  {
-    title: 'Clean Code',
-    published: 2008,
-    author: 'Robert Martin',
-    id: 'afa5b6f4-344d-11e9-a414-719c6709cf3e',
-    genres: ['refactoring'],
-  },
-  {
-    title: 'Agile software development',
-    published: 2002,
-    author: 'Robert Martin',
-    id: 'afa5b6f5-344d-11e9-a414-719c6709cf3e',
-    genres: ['agile', 'patterns', 'design'],
-  },
-  {
-    title: 'Refactoring, edition 2',
-    published: 2018,
-    author: 'Martin Fowler',
-    id: 'afa5de00-344d-11e9-a414-719c6709cf3e',
-    genres: ['refactoring'],
-  },
-  {
-    title: 'Refactoring to patterns',
-    published: 2008,
-    author: 'Joshua Kerievsky',
-    id: 'afa5de01-344d-11e9-a414-719c6709cf3e',
-    genres: ['refactoring', 'patterns'],
-  },
-  {
-    title: 'Practical Object-Oriented Design, An Agile Primer Using Ruby',
-    published: 2012,
-    author: 'Sandi Metz',
-    id: 'afa5de02-344d-11e9-a414-719c6709cf3e',
-    genres: ['refactoring', 'design'],
-  },
-  {
-    title: 'Crime and punishment',
-    published: 1866,
-    author: 'Fyodor Dostoevsky',
-    id: 'afa5de03-344d-11e9-a414-719c6709cf3e',
-    genres: ['classic', 'crime'],
-  },
-  {
-    title: 'Demons',
-    published: 1872,
-    author: 'Fyodor Dostoevsky',
-    id: 'afa5de04-344d-11e9-a414-719c6709cf3e',
-    genres: ['classic', 'revolution'],
-  },
-];
-
 const typeDefs = `
-    type Book {
+  type Book {
     title: String!
     published: Int!
     author: Author!
     genres: [String!]!
     id: ID!
-}
+  }
 
   type Author {
     name: String!
     born: Int
     bookCount: Int!
+    id: ID!
   }
 
   type Query {
@@ -138,11 +47,11 @@ const typeDefs = `
 
   type Mutation {
     addBook(
-    title: String!
-    author: String!
-    published: Int!
-    genres: [String!]!
-  ): Book!
+      title: String!
+      author: String!
+      published: Int!
+      genres: [String!]!
+    ): Book!
 
     editAuthor(
       name: String!
@@ -190,41 +99,85 @@ const resolvers = {
   },
   Mutation: {
     addBook: async (root, args) => {
-      const author =
-        (await Author.findOne({ name: args.author })) ||
-        new Author({ name: args.author });
-      try {
-        await author.save();
-      } catch (error) {
-        throw new GraphQLError(error.message, {
-          invalidArgs: { author: args.author },
-        });
-      }
+      const { title, author, published, genres } = args;
 
-      const book = new Book({ ...args, author });
       try {
-        await book.save();
-      } catch (error) {
-        throw new GraphQLError(error.message, {
-          invalidArgs: args,
+        const bookExists = await Book.findOne({ title });
+        if (bookExists) {
+          throw new GraphQLError('Book already exists', {
+            extensions: {
+              code: 'BOOK_ALREADY_EXISTS',
+              invalidArgs: args,
+            },
+          });
+        }
+
+        let authorExists = await Author.findOne({ name: author });
+        if (!authorExists) {
+          const newAuthor = new Author({ name: author });
+          authorExists = await newAuthor.save();
+        }
+
+        const newBook = new Book({
+          title,
+          author: authorExists._id,
+          published,
+          genres,
         });
+
+        await newBook.save();
+        return newBook.populate('author');
+      } catch (error) {
+        if (error.name === 'ValidationError') {
+          const validationErrors = Object.values(error.errors)
+            .map(e => e.message)
+            .join(', ');
+
+          throw new GraphQLError(`Validation error: ${validationErrors}`, {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              invalidArgs: args,
+            },
+          });
+        }
+
+        throw error;
       }
-      return book;
     },
+
     editAuthor: async (root, args) => {
-      const author = await Author.findOne({ name: args.name });
-      if (!author) {
-        return null;
-      }
-      author.born = args.setBornTo;
+      const { name, setBornTo } = args;
+
       try {
+        const author = await Author.findOne({ name });
+        if (!author) {
+          throw new GraphQLError('Author not found', {
+            extensions: {
+              code: 'AUTHOR_NOT_FOUND',
+              invalidArgs: args,
+            },
+          });
+        }
+
+        author.born = setBornTo;
         await author.save();
+        return author;
       } catch (error) {
-        throw new GraphQLError(error.message, {
-          invalidArgs: { setBornTo: args.setBornTo },
-        });
+        if (error.name === 'ValidationError') {
+          const validationErrors = Object.values(error.errors)
+            .map(e => e.message)
+            .join(', ');
+
+          throw new GraphQLError(`Validation error: ${validationErrors}`, {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              invalidArgs: args,
+            },
+          });
+        }
+
+        throw error;
       }
-      return author;
     },
   },
 };
