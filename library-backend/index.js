@@ -2,6 +2,25 @@ const { ApolloServer } = require('@apollo/server');
 const { startStandaloneServer } = require('@apollo/server/standalone');
 const { v1: uuid } = require('uuid');
 const { GraphQLError } = require('graphql');
+const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
+mongoose.set('strictQuery', false);
+require('dotenv').config();
+const Book = require('./models/book');
+const Author = require('./models/author');
+
+const MONGO_URI = process.env.MONGODB_URI;
+
+console.log('connecting to', MONGO_URI);
+
+mongoose
+  .connect(MONGO_URI)
+  .then(() => {
+    console.log('connected to MongoDB');
+  })
+  .catch(error => {
+    console.log('error connection to MongoDB:', error.message);
+  });
 
 let authors = [
   {
@@ -96,12 +115,13 @@ let books = [
 ];
 
 const typeDefs = `
-  type Book {
+    type Book {
     title: String!
-    author: String!
     published: Int!
+    author: Author!
     genres: [String!]!
-  }
+    id: ID!
+}
 
   type Author {
     name: String!
@@ -118,11 +138,11 @@ const typeDefs = `
 
   type Mutation {
     addBook(
-      title: String!
-      author: String!
-      published: Int!
-      genres: [String!]!
-    ): Book!
+    title: String!
+    author: String!
+    published: Int!
+    genres: [String!]!
+  ): Book!
 
     editAuthor(
       name: String!
@@ -133,38 +153,29 @@ const typeDefs = `
 
 const resolvers = {
   Query: {
-    bookCount: () => books.length,
-    authorCount: () => authors.length,
-    allBooks: (root, args) => {
-      let filteredBooks = books;
-
-      if (args.author) {
-        filteredBooks = filteredBooks.filter(
-          book => book.author === args.author,
-        );
+    bookCount: async () => Book.collection.countDocuments(),
+    authorCount: async () => Author.collection.countDocuments(),
+    allBooks: async (root, args) => {
+      if (!args.author && !args.genre) {
+        return await Book.find({});
       }
 
-      if (args.genre) {
-        filteredBooks = filteredBooks.filter(book =>
-          book.genres.includes(args.genre),
-        );
-      }
-
-      return filteredBooks;
+      return Book.find({}).populate('author');
     },
-    allAuthors: () =>
-      authors.map(author => ({
+    allAuthors: async () => {
+      const authors = await Author.find({});
+      return authors.map(author => ({
         name: author.name,
         born: author.born || null,
-        bookCount: books.filter(book => book.author === author.name).length,
-      })),
+        bookCount: Book.countDocuments({ author: author._id }),
+      }));
+    },
   },
   Mutation: {
-    addBook: (root, args) => {
+    addBook: async (root, args) => {
       const { title, author, published, genres } = args;
 
-      const bookExists = books.find(b => b.title === title);
-
+      const bookExists = await Book.findOne({ title });
       if (bookExists) {
         throw new GraphQLError('Book already exists', {
           extensions: {
@@ -174,36 +185,22 @@ const resolvers = {
         });
       }
 
-      let authorExists = authors.find(a => a.name === author);
+      let authorExists = await Author.findOne({ name: author });
 
       if (!authorExists) {
-        authorExists = { name: author, id: uuid() };
-        authors.push(authorExists);
+        const newAuthor = new Author({ name: author });
+        authorExists = await newAuthor.save();
       }
 
-      const newBook = {
+      const newBook = new Book({
         title,
-        author: authorExists.name,
+        author: authorExists._id,
         published,
         genres,
-        id: uuid(),
-      };
+      });
 
-      books.push(newBook);
-      return newBook;
-    },
-
-    editAuthor: (root, args) => {
-      const { name, setBornTo } = args;
-      const author = authors.find(a => a.name === name);
-
-      if (!author) {
-        return null;
-      }
-
-      const updatedAuthor = { ...author, born: setBornTo };
-      authors = authors.map(a => (a.name === name ? updatedAuthor : a));
-      return updatedAuthor;
+      await newBook.save();
+      return newBook.populate('author');
     },
   },
 };
