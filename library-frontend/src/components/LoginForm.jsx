@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@apollo/client';
-import { LOGIN } from '../queries';
+import { LOGIN, ME } from '../queries';
 
 const LoginForm = ({ setToken, setError }) => {
   const [username, setUsername] = useState('');
@@ -13,6 +13,11 @@ const LoginForm = ({ setToken, setError }) => {
     onError: error => {
       setError(error.graphQLErrors[0]?.message || 'Something went wrong');
     },
+    onCompleted: () => {
+      navigate('/');
+    },
+
+    refetchQueries: [{ query: ME }],
   });
 
   const handleLogin = async event => {

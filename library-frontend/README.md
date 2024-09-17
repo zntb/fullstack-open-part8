@@ -79,3 +79,9 @@ Complete your application to filter the book list by genre. Your solution might 
 ![books by genre](./assets/30.png)
 
 In this exercise, the filtering can be done using just React.
+
+### 8.20 Books by genre, part 2
+
+Implement a view which shows all the books based on the logged-in user's favourite genre.
+
+![books by genre 2](./assets/29.png)
