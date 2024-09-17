@@ -85,3 +85,9 @@ In this exercise, the filtering can be done using just React.
 Implement a view which shows all the books based on the logged-in user's favourite genre.
 
 ![books by genre 2](./assets/29.png)
+
+### 8.21 books by genre with GraphQL
+
+In the previous two exercises, the filtering could have been done using just React. To complete this exercise, you should redo the filtering the books based on a selected genre (that was done in exercise 8.19) using a GraphQL query to the server. If you already did so then you do not have to do anything.
+
+This and the next exercises are quite **challenging** like it should be this late in the course. You might want to complete first the easier ones in the [next part](https://fullstackopen.com/en/part8/fragments_and_subscriptions).

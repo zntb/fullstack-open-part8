@@ -80,28 +80,22 @@ const resolvers = {
     bookCount: async () => Book.collection.countDocuments(),
     authorCount: async () => Author.collection.countDocuments(),
     allBooks: async (root, args) => {
-      if (!args.author && !args.genre) {
-        console.log(await Book.find({}));
-        return Book.find({}).populate('author');
-      }
+      const filter = {};
 
-      if (args.author && !args.genre) {
+      if (args.author) {
         const author = await Author.findOne({ name: args.author });
-        return await Book.find({ author });
+        if (author) {
+          filter.author = author._id;
+        }
       }
 
-      if (!args.author && args.genre) {
-        return await Book.find({ genres: { $in: [args.genre] } });
+      if (args.genre) {
+        filter.genres = { $in: [args.genre] };
       }
 
-      const author = await Author.findOne({ name: args.author });
-      if (!author) {
-        return [];
-      }
-      return await Book.find({
-        author: author.id,
-        genres: { $in: [args.genre] },
-      });
+      const books = await Book.find(filter).populate('author');
+
+      return books.filter(book => book.author && book.author.name);
     },
     allAuthors: async () => Author.find({}),
     me: (root, args, context) => {
@@ -255,20 +249,20 @@ startStandaloneServer(server, {
   listen: { port: 4000 },
   context: async ({ req }) => {
     const auth = req ? req.headers.authorization : null;
-    console.log('Authorization Header:', auth);
+    // console.log('Authorization Header:', auth);
 
     if (auth && auth.startsWith('Bearer ')) {
       const token = auth.substring(7);
       try {
         const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-        console.log('Decoded Token:', decodedToken);
+        // console.log('Decoded Token:', decodedToken);
 
         const currentUser = await User.findById(decodedToken.id);
-        console.log('Current User:', currentUser);
+        // console.log('Current User:', currentUser);
 
         return { currentUser };
       } catch (error) {
-        console.error('Token Verification Error:', error);
+        // console.error('Token Verification Error:', error);
         return { currentUser: null };
       }
     }
