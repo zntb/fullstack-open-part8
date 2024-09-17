@@ -45,3 +45,9 @@ Change the birth year form so that a birth year can be set only for an existing 
 A solution using the react select library looks as follows:
 
 ![birth year advanced](./assets/21.png)
+
+## Exercises 8.17.-8.22
+
+### 8.17 Listing books
+
+After the backend changes, the list of books does not work anymore. Fix it.
