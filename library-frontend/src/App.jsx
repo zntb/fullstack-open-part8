@@ -6,7 +6,8 @@ import NewBook from './components/NewBook';
 import Recommendations from './components/Recommendations';
 import Notify from './components/Notify';
 import LoginForm from './components/LoginForm';
-import { useApolloClient } from '@apollo/client';
+import { useApolloClient, useSubscription } from '@apollo/client';
+import { BOOK_ADDED, ALL_BOOKS } from './queries';
 
 const App = () => {
   const [errorMessage, setErrorMessage] = useState(null);
@@ -15,9 +16,9 @@ const App = () => {
   const client = useApolloClient();
 
   useEffect(() => {
-    const token = localStorage.getItem('phonenumbers-user-token');
-    if (token) {
-      setToken(token);
+    const savedToken = localStorage.getItem('phonenumbers-user-token');
+    if (savedToken) {
+      setToken(savedToken);
     }
   }, []);
 
@@ -33,6 +34,29 @@ const App = () => {
       setErrorMessage(null);
     }, 10000);
   };
+
+  const updateCacheWith = addedBook => {
+    const dataInStore = client.readQuery({ query: ALL_BOOKS });
+    if (dataInStore.allBooks.some(b => b.id === addedBook.id)) {
+      return;
+    }
+
+    client.writeQuery({
+      query: ALL_BOOKS,
+      data: { allBooks: dataInStore.allBooks.concat(addedBook) },
+    });
+  };
+
+  useSubscription(BOOK_ADDED, {
+    onData: ({ data }) => {
+      const addedBook = data.data.bookAdded;
+      notify(`New book added: ${addedBook.title} by ${addedBook.author.name}`);
+      window.alert(
+        `New book added: ${addedBook.title} by ${addedBook.author.name}`,
+      );
+      updateCacheWith(addedBook);
+    },
+  });
 
   return (
     <Router>

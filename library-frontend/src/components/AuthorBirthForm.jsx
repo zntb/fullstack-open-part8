@@ -22,6 +22,11 @@ const AuthorBirthForm = ({ authors, setError }) => {
       return;
     }
 
+    if (isNaN(born)) {
+      setError('Birth year must be a valid number.');
+      return;
+    }
+
     await editAuthor({
       variables: { name, setBornTo: Number(born) },
     });
@@ -31,7 +36,7 @@ const AuthorBirthForm = ({ authors, setError }) => {
 
   return (
     <div>
-      <h3>Set birthyear</h3>
+      <h3>Set birth year</h3>
       <form onSubmit={submit}>
         <div>
           name
@@ -48,7 +53,9 @@ const AuthorBirthForm = ({ authors, setError }) => {
           <input
             type='number'
             value={born}
-            onChange={({ target }) => setBorn(Number(target.value))}
+            onChange={({ target }) =>
+              setBorn(target.value ? Number(target.value) : '')
+            }
           />
         </div>
         <button type='submit'>update author</button>
