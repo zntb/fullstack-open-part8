@@ -3,7 +3,9 @@ import { ALL_AUTHORS } from '../queries';
 import AuthorBirthForm from './AuthorBirthForm';
 
 const Authors = ({ show, setError }) => {
-  const { loading, error, data } = useQuery(ALL_AUTHORS);
+  const { loading, error, data } = useQuery(ALL_AUTHORS, {
+    fetchPolicy: 'cache-and-network',
+  });
 
   if (!show) {
     return null;

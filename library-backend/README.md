@@ -371,3 +371,16 @@ Make the mutations `addBook` and `editAuthor` possible only if the request inclu
 ### 8.23: Subscriptions - server
 
 Do a backend implementation for subscription `bookAdded`, which returns the details of all new books to its subscribers.
+
+### 8.26: n+1
+
+Solve the n+1 problem of the following query using any method you like.
+
+```graphql
+query {
+  allAuthors {
+    name
+    bookCount
+  }
+}
+```

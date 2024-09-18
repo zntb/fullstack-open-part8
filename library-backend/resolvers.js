@@ -1,9 +1,9 @@
 const jwt = require('jsonwebtoken');
+const { GraphQLError } = require('graphql');
+const { PubSub } = require('graphql-subscriptions');
 const Book = require('./models/book');
 const Author = require('./models/author');
 const User = require('./models/user');
-const { GraphQLError } = require('graphql');
-const { PubSub } = require('graphql-subscriptions');
 const { handleValidationError } = require('./utils/handleErrors');
 
 const pubsub = new PubSub();
@@ -20,10 +20,18 @@ const resolvers = {
         if (author) filter.author = author._id;
       }
       if (args.genre) filter.genres = { $in: [args.genre] };
-      return Book.find(filter).populate('author').exec();
+      return Book.find(filter)
+        .populate('author')
+        .exec()
+        .then(books => books.filter(book => book.author != null));
     },
-    allAuthors: async () => {
-      return await Author.find({});
+    allAuthors: async (root, args, { bookCountLoader }) => {
+      const authors = await Author.find({});
+      return authors.map(author => ({
+        ...author._doc,
+        id: author._id.toString(),
+        bookCount: bookCountLoader.load(author._id),
+      }));
     },
     me: (root, args, context) => {
       if (!context.currentUser) {

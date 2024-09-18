@@ -23,13 +23,17 @@ const LoginForm = ({ setToken, setError }) => {
   const handleLogin = async event => {
     event.preventDefault();
 
-    const result = await login({ variables: { username, password } });
+    try {
+      const result = await login({ variables: { username, password } });
 
-    if (result.data) {
-      const token = result.data.login.value;
-      setToken(token);
-      localStorage.setItem('phonenumbers-user-token', token);
-      navigate('/');
+      if (result.data) {
+        const token = result.data.login.value;
+        setToken(token);
+        localStorage.setItem('phonenumbers-user-token', token);
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
     }
   };
 

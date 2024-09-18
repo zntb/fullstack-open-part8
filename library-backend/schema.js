@@ -1,6 +1,4 @@
-const { gql } = require('graphql-tag');
-
-const typeDefs = gql`
+const typeDefs = `
   type Book {
     title: String!
     published: Int!
@@ -10,11 +8,11 @@ const typeDefs = gql`
   }
 
   type Author {
-    name: String!
-    born: Int
-    bookCount: Int!
-    id: ID!
-  }
+  name: String!
+  born: Int
+  bookCount: Int!
+  id: ID!
+}
 
   type User {
     username: String!
