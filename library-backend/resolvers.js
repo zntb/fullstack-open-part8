@@ -3,7 +3,11 @@ const Book = require('./models/book');
 const Author = require('./models/author');
 const User = require('./models/user');
 const { GraphQLError } = require('graphql');
+const { PubSub } = require('graphql-subscriptions');
 const { handleValidationError } = require('./utils/handleErrors');
+
+const pubsub = new PubSub();
+const BOOK_ADDED = 'BOOK_ADDED';
 
 const resolvers = {
   Query: {
@@ -21,7 +25,14 @@ const resolvers = {
     allAuthors: async () => {
       return await Author.find({});
     },
-    me: (root, args, context) => context.currentUser,
+    me: (root, args, context) => {
+      if (!context.currentUser) {
+        throw new GraphQLError('Authentication required', {
+          extensions: { code: 'UNAUTHENTICATED' },
+        });
+      }
+      return context.currentUser;
+    },
   },
 
   Author: {
@@ -57,7 +68,12 @@ const resolvers = {
           published,
           genres,
         }).save();
-        return newBook.populate('author');
+
+        const populatedBook = await newBook.populate('author');
+
+        pubsub.publish(BOOK_ADDED, { bookAdded: populatedBook });
+
+        return populatedBook;
       } catch (error) {
         handleValidationError(error, args);
       }
@@ -103,6 +119,12 @@ const resolvers = {
         process.env.JWT_SECRET,
       );
       return { value: token };
+    },
+  },
+
+  Subscription: {
+    bookAdded: {
+      subscribe: () => pubsub.asyncIterator([BOOK_ADDED]),
     },
   },
 };

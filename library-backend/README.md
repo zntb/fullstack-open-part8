@@ -367,3 +367,7 @@ Create resolvers for query `me` and the new mutations `createUser` and `login`. 
 Make the mutations `addBook` and `editAuthor` possible only if the request includes a valid token.
 
 (Don't worry about fixing the frontend for the moment.)
+
+### 8.23: Subscriptions - server
+
+Do a backend implementation for subscription `bookAdded`, which returns the details of all new books to its subscribers.
