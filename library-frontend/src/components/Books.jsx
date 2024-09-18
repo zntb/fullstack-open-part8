@@ -5,7 +5,9 @@ import { ALL_BOOKS } from '../queries';
 const Books = props => {
   const [selectedGenre, setSelectedGenre] = useState('all genres');
 
-  const { loading, error, data } = useQuery(ALL_BOOKS);
+  const { loading, error, data } = useQuery(ALL_BOOKS, {
+    fetchPolicy: 'cache-and-network',
+  });
 
   if (!props.show) {
     return null;

@@ -37,13 +37,18 @@ const App = () => {
 
   const updateCacheWith = addedBook => {
     const dataInStore = client.readQuery({ query: ALL_BOOKS });
-    if (dataInStore.allBooks.some(b => b.id === addedBook.id)) {
-      return;
-    }
+    if (!dataInStore) return;
+
+    const alreadyInStore = dataInStore.allBooks.some(
+      book => book.id === addedBook.id,
+    );
+    if (alreadyInStore) return;
 
     client.writeQuery({
       query: ALL_BOOKS,
-      data: { allBooks: dataInStore.allBooks.concat(addedBook) },
+      data: {
+        allBooks: dataInStore.allBooks.concat(addedBook),
+      },
     });
   };
 
@@ -51,9 +56,6 @@ const App = () => {
     onData: ({ data }) => {
       const addedBook = data.data.bookAdded;
       notify(`New book added: ${addedBook.title} by ${addedBook.author.name}`);
-      window.alert(
-        `New book added: ${addedBook.title} by ${addedBook.author.name}`,
-      );
       updateCacheWith(addedBook);
     },
   });
